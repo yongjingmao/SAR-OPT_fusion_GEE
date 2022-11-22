@@ -3,7 +3,7 @@
     "GEE_USERNAME": "yongjingmao",
     "EXPORT_INPUT": false,
     "EXPORT_RLR": true,
-    "EXPORT_PCA": false,
+    "EXPORT_PCA": true,
     "CLEAR_EXISTING": false,
     "OPTICAL_MISSION": "S2",
     "START_DATE": "2016-01-01",
@@ -12,7 +12,7 @@
     "TRAIN_TEST_SPLIT": 0.6,
     "VAL_SPLIT": 0.2,
     "RANDOM_SPLIT": true,
-    "PCA_SMOOTH": false,
+    "PCA_SMOOTH": true,
     "PCA_COMPONENT_RATIO": 0.1,
     "STD_CLOUD_THRESHOLD": 50,
     "AOI_NAME": "North Qld"
