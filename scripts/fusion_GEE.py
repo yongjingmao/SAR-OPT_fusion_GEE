@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-This script performs GEE-based optical-SAR fusing
+This script performs GEE-based SAR-Optical fusing
 It retrieves optical and SAR satellite images from GEE within a period and an AOI,
-predicts cloudy optical images with corresponding SAR images which are not affected by cloud,
+reconstructs cloudy optical images with corresponding SAR images which are not affected by cloud,
 and output infilled optical images
 
-The step numbering refers to the numbered steps provided in the Flowchart "GEE_Optical_Infilling"
+The step numbering refers to the numbered steps provided in the Flowchart
 and this flowchart is part of the read_me file.
 """
 
@@ -13,7 +13,6 @@ import os
 import time
 import math
 import json
-import geojson
 import geopandas as gpd
 import pandas as pd
 import ee
@@ -28,17 +27,14 @@ import GEE_funcs
 #%%
 def main():
     """
-    ==========================
-     Read input
-    ==========================
-    """
+    ==============================
+     Read input and set parameters
+    ==============================
+    """    
+    cfg = json.load(open(r"..\config\Parameters.json", 'r'))
     AOIs = gpd.read_file(
         r"..\AOI\AOI_5km.shp"
         )
-    AOI = list(AOIs.loc[AOIs['Name']=="North Qld", 'geometry'])[0]
-    AOI = ee.Geometry.Polygon(list(AOI.exterior.coords))
-    
-    cfg = json.load(open(r"..\config\Parameters.json", 'r'))
     
     """
     Setting environment parameters
@@ -57,7 +53,7 @@ def main():
     # Save these intermediate outputs can improve the efficiency and
     # avoid exceeding GEE capability
     EXPORT_RLR = cfg["EXPORT_RLR"]  # Export result of robust linear regression, highly recommended
-    EXPORT_PCA = cfg["EXPORT_PCA"]  # Export result of temporal PCA analysis
+    EXPORT_PCA = cfg["EXPORT_PCA"]  # Export result of temporal PCA analysis, set to False if PCA_SMOOTH is False
     
     # Clear existing intermediate outputs or not
     CLEAR_EXISTING = cfg["CLEAR_EXISTING"]
@@ -81,15 +77,15 @@ def main():
     VAL_SPLIT = cfg["VAL_SPLIT"]
     # Whether split randomly, True=Random, False=Ascending
     RANDOM_SPLIT = cfg["RANDOM_SPLIT"]
-    # Whether implementing temporal PCA smooth
-    PCA_SMOOTH = cfg["CA_SMOOTH"]
+    # Whether implementing temporal PCA smooth, set to False when dealing with large memory
+    PCA_SMOOTH = cfg["PCA_SMOOTH"]
     # The ratio of PCA components used for reconstructing
     PCA_COMPONENT_RATIO = cfg["PCA_COMPONENT_RATIO"]
     # Threshold of cloud percentage, above which spatial stardardization will be applied
     STD_CLOUD_THRESHOLD = cfg["STD_CLOUD_THRESHOLD"]
     
     # Area of interest (AOI) should be saved into a json file
-    AOI_name = cfg["AOI_name"]
+    AOI_NAME = cfg["AOI_NAME"]
     
     print("Project:{} started".format(PROJECT_TITLE))
     nameSuffix = "_{}_{}_{}".format(OPTICAL_MISSION, START_DATE, END_DATE)
@@ -123,7 +119,9 @@ def main():
      Preprocess optical images
     ==========================
     """
-     
+    AOI = list(AOIs.loc[AOIs['Name']==AOI_NAME, 'geometry'])[0]
+    AOI = ee.Geometry.Polygon(list(AOI.exterior.coords))
+    
     # Dependant variables used for modelling
     dep_variables = ['NDVI']
     
@@ -154,7 +152,8 @@ def main():
             optical_bands[OPTICAL_MISSION], [
                 'Red', 'NIR', 'cloud']) .filterDate(
                     START_DATE, END_DATE)
-        
+    
+    # Step 1~2, calculate NDVI and preprocess optical images
     optical_collection = GEE_funcs.prepare_optical(optical_collection, AOI,
                                                    OPTICAL_MISSION)
     
@@ -179,7 +178,7 @@ def main():
         metadata_collection = ee.FeatureCollection(indices.map(collect_metadata))
         
         task1 = utilities.export_image_todrive(
-            input_NDVI,
+            input_NDVI, AOI,
             'NDVI_Input' + nameSuffix,
             PROJECT_TITLE,
             description='Input NDVI')
@@ -230,17 +229,17 @@ def main():
         metadata_collection = ee.FeatureCollection(indices.map(collect_metadata))
         
         task1 = utilities.export_image_todrive(
-            InputVV,
+            InputVV, AOI,
             'VV_Input' + nameSuffix,
             PROJECT_TITLE,
             description='Input VV')
         task2 = utilities.export_image_todrive(
-            InputVH,
+            InputVH, AOI,
             'VH_Input' + nameSuffix,
             PROJECT_TITLE,
             description='Input VH')        
         task3 = utilities.export_table_todrive(
-            metadata_collection,
+            metadata_collection, AOI,
             'InputS1_Metadata' + nameSuffix,
             PROJECT_TITLE,
             description='Metadata')
@@ -255,7 +254,9 @@ def main():
      Pairing and partitioning
     ==========================
     """
-    opt_SAR = GEE_funcs.pair_opt_SAR(optical_collection, S1)
+    
+    # Step 3, 4 and 5
+    opt_SAR = GEE_funcs.pair_opt_SAR(optical_collection, S1, AOI, indep_variables)
     
     # Raise error is there is less than 10 image pairs for model training
     pair_size = opt_SAR.size().getInfo()
@@ -278,7 +279,7 @@ def main():
     
     opt_SAR = ee.ImageCollection(opt_SAR.map(createConstantBand))
     
-    if len(PATH_MATADATA)==0:
+    if PATH_MATADATA is None:
         # Set train_test_val property
         if not RANDOM_SPLIT:
             split_position = ee.Dictionary(
@@ -405,7 +406,7 @@ def main():
         rlrID = subasset_folder + '/' + rlrname
     
         if rlrname not in subasset_names:
-            task = utilities.export_image_toasset(rlr_image, rlrID, description='rlr_image')
+            task = utilities.export_image_toasset(rlr_image, AOI, rlrID, description='rlr_image')
             check_task_status(task)
         rlr_image = ee.Image(rlrID).select(['constant'] + indep_variables)
     
@@ -431,6 +432,7 @@ def main():
     Post process including PCA smoothing and spatial stardardization
     ================================================================
     """
+    # Step 8
     if PCA_SMOOTH:
         NDVI_smoothed = GEE_funcs.Temporal_PCA(
             opt_SAR_outputs.select('NDVI_pred'),
@@ -459,6 +461,7 @@ def main():
         if smoothed_name not in subasset_names:
             task = utilities.export_image_toasset(
                 NDVI_smoothed,
+                AOI,
                 smoothed_id,
                 description='Smoothed NDVI')
             check_task_status(task)
@@ -468,7 +471,7 @@ def main():
             NDVI_smoothed = NDVI_smoothed.select(S2_ids_new, S2_ids)
         
     
-    
+    # Step 9&10
     NDVI_calibrated, NDVI_filled = GEE_funcs.post_process(
         opt_SAR_outputs, NDVI_smoothed, AOI, STD_CLOUD_THRESHOLD
         )
@@ -518,23 +521,23 @@ def main():
     
     
     task1 = utilities.export_image_todrive(
-        OutputPred,
+        OutputPred, AOI,
         'NDVI_Pred' + nameSuffix,
         PROJECT_TITLE,
         description='NDVI prediction')
     task2 = utilities.export_image_todrive(
-        OutputObs,
+        OutputObs,AOI,
         'NDVI_Obs' + nameSuffix,
         PROJECT_TITLE,
         description='NDVI obs')
     
     task3 = utilities.export_image_todrive(
-        OutputFilled,
+        OutputFilled, AOI,
         'NDVI_gapfree' + nameSuffix,
         PROJECT_TITLE,
         description='NDVI gap filled')
     task4 = utilities.export_image_todrive(
-        OutputMask,
+        OutputMask, AOI, 
         'NDVI_Mask' + nameSuffix,
         PROJECT_TITLE,
         description='NDVI cloud mask')

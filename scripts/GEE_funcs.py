@@ -18,6 +18,7 @@ def prepare_optical(optical_collection, AOI, optical_mission):
         NDVI = img.select('NIR').subtract(img.select('Red'))\
             .divide(img.select('NIR').add(img.select('Red'))).rename('NDVI')
         return img.addBands(NDVI)
+    
     def add_cloudMask_L8(img):
         """ Step2: Process Landsat 8 cloud flag
         In the cloud mask, 1 is for cloudy pixel.
@@ -94,7 +95,7 @@ def prepare_optical(optical_collection, AOI, optical_mission):
 def cal_covariates(img, AOI, indep_variables):
     
     """
-    Calculate temporal and spatial covariates with spatial-first method 
+    Step 3 Calculate temporal and spatial covariates with spatial-first method 
     """
     # Mask dark edges in S1 images
     img = img.updateMask(img.gt(-40))
@@ -129,9 +130,9 @@ def cal_covariates(img, AOI, indep_variables):
     return img    
     
 
-def pair_opt_SAR(optical_collection, SAR_collection):
+def pair_opt_SAR(optical_collection, SAR_collection, AOI, indep_variables):
     """
-    Pair optical and SAR image collections
+    Step 5 Pair optical and SAR image collections
     """
     def pair_image(img):
         """ Step5: Pair Optical and SAR images according to collection date
@@ -147,7 +148,7 @@ def pair_opt_SAR(optical_collection, SAR_collection):
         S1_composite = S1_filtered.mean()
     
         # Calculate covariates
-        S1_covariates = cal_covariates(S1_composite)
+        S1_covariates = cal_covariates(S1_composite, AOI, indep_variables)
         img = img.set({'S1_COUNT': S1_filtered.size()})
         img = ee.Algorithms.If(
             S1_filtered.size().gt(0),
@@ -156,7 +157,7 @@ def pair_opt_SAR(optical_collection, SAR_collection):
         return ee.Image(img)
     
     
-    opt_SAR = optical_collection.map(pair_opt_SAR).filterMetadata(
+    opt_SAR = optical_collection.map(pair_image).filterMetadata(
         'S1_COUNT', 'greater_than', 0)
     return opt_SAR
 
