@@ -5,6 +5,7 @@ All outputs will be exported to the Google Drive linked to the GEE account.
 - fusion_GEE.py performs GEE-based optical-SAR fusing. It retrieves optical and SAR satellite images from GEE for an user-specified period and AOI, predicts cloudy optical images with corresponding SAR images which are not affected by cloud, and outputs infilled optical images.
 - Parameters.json in config folder contains the configuration for all environmental and model parameters.
 - The AOI.shp in AOI folder contains all case study sites as below:
+
 | Name               | Landcover and Natural                                                         | Area (km^2) | Site Central Longitude (°E) | Site Central Latitude (°S) |
 |--------------------|-------------------------------------------------------------------------------|-------------|-----------------------------|----------------------------|
 | North NT           | Conservation environments and irrigated perennial horticulture                | 24          | 131.2                       | -12.59                     |
@@ -18,14 +19,20 @@ All outputs will be exported to the Google Drive linked to the GEE account.
 ## Flow charts
 - SAR-OPT_fusion
 ![SAR-OPT_fusion](FlowChart/SAR-Optical_fusion.jpg)
-## Challenges
-- GEE_Optical_Gaps.py has been fully (all avaiable images selected) tested for AOIs less than 100 km x 100 km (1e8 pixels),
-larger AOIs may need to be divided into smaller tiles.
-- Although GEE_Optical_Infilling.py sets the maximum pixels to 1e9, GEE_Optical_Infilling.py has only been fully tested on a small AOI (e.g. 5 km * 3 km, 1.5e5 pixels), 
-which took 3 (1) hours to run, and 300 MB (200 MB) to store data for Sentinel-2 (Landsat-8). 
-We explored the capability of this model at an entire Landsat-8 WRS2 tile (185 km x 180 km, 3.3e8 pixels). 
-it took about 10 hours to train the model for Landsat-8 and consumed more than 20 GB to save the trained model as an intermediate output
-(we did not compelete the entire process and exported final outputs due to shortage of storage).
+## Scability
+- The algorithm was implemented on Google Earth Engine with a standard (free) account, and the resultant images were exported to Google Drive. Details about the time and storage cost under several different scenarios were summarized below:
+
+| Scenario | Image size (pixels) | Number of images | Training and prediction time (mins) | Post-process time (mins)           | Size of images to reconstruct |
+|----------|---------------------|------------------|-------------------------------------|------------------------------------|-------------------------------|
+| 1        | 248 × 240           | 207              | 2                                   | 9                                  | 87.22 MB                      |
+| 2        | 500 × 414           | 437              | 10                                  | 60                                 | 802.36 MB                     |
+| 3        | 2750 × 4671         | 380              | 40                                  | Failed (Exceeded GEE memory limit) | 34.66 GB                      |
+
+- For research on large spatio-temporal extents, we suggest to: 
+  1. use other smoothing methods (e.g., spatial instead of temporal smoothers) for post-processing; 
+  2. download the raw predictions and smooth the data locally according to requirements; 
+  3. process the large area/timespan as small batches; and/or (iv) apply for larger memory limits from GEE.
+
 ## Installation
 To use GEE, you must first *[sign up](https://earthengine.google.com/signup/)* for a *[Google Earth Engine](https://earthengine.google.com/)* account.
 
@@ -44,7 +51,7 @@ To authenticate and initialize ee
 import ee
 ee.Authenticate()
 ee.Initialize()
-```bash
+```
 ## Usage
 The setup and parameters can be tuned in the Parameters.json in config folder.
 To implement the gap infilling
@@ -52,7 +59,7 @@ To implement the gap infilling
 cd scripts
 python fusion_GEE.py
 ```
-## Dataset Paths
+## Output Dataset Paths
 Output images and metadata will be saved in a Google Drive folder named according to the parameter "PROJECT_TITLE". 
 GEE will search for the folder name on Google Drive from root to sub directories.
 If the folder has already existed in a subdirectory, outputs will be saved there, 
