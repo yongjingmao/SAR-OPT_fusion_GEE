@@ -1,5 +1,5 @@
-# Reconstructing Optical satellite images (Sentinel-2 or Landsat 8) using Sentinel-1 based modelling on Google Earth Engine (GEE)
-Python scripts GEE_Optical_Gaps.py and GEE_Optical_Infilling.py achieve these two objectives respectively and independently. 
+# Reconstructing cloud-contaminated satellite images with SAR-Optical fusion using spatio-temporal partitioning and multiple linear regression 
+Python scripts fusion_GEE.py achieves this objective. 
 All outputs will be exported to the Google Drive linked to the GEE account.
 ## Description
 - fusion_GEE.py performs GEE-based optical-SAR fusing. It retrieves optical and SAR satellite images from GEE for an user-specified period and AOI, predicts cloudy optical images with corresponding SAR images which are not affected by cloud, and outputs infilled optical images.
@@ -28,7 +28,7 @@ All outputs will be exported to the Google Drive linked to the GEE account.
 | 2        | 500 × 414           | 437              | 10                                  | 60                                 | 802.36 MB                     |
 | 3        | 2750 × 4671         | 380              | 40                                  | Failed (Exceeded GEE memory limit) | 34.66 GB                      |
 
-- For research on large spatio-temporal extents, we suggest to: 
+- For application at large spatio-temporal extents, we suggest to: 
   1. use other smoothing methods (e.g., spatial instead of temporal smoothers) for post-processing; 
   2. download the raw predictions and smooth the data locally according to requirements; 
   3. process the large area/timespan as small batches; and/or (iv) apply for larger memory limits from GEE.
