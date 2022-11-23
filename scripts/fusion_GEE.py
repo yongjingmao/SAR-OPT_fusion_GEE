@@ -30,9 +30,8 @@ def main():
     ==============================
     """
     cfg = json.load(open(r"..\config\Parameters.json", 'r'))
-    AOIs = gpd.read_file(
-        r"..\AOI\AOI_5km.shp"
-    )
+    AOI_PATH = cfg["AOI_PATH"]
+    AOIs = gpd.read_file(AOI_PATH)
 
     """
     Setting environment parameters
@@ -89,7 +88,7 @@ def main():
     # be applied
     STD_CLOUD_THRESHOLD = cfg["STD_CLOUD_THRESHOLD"]
 
-    # Area of interest (AOI) should be saved into a json file
+    # Area of interest (AOI) should be saved into a json or shp file
     AOI_NAME = cfg["AOI_NAME"]
 
     print("Project:{} started".format(PROJECT_TITLE))

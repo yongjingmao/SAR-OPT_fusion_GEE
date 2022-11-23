@@ -4,7 +4,7 @@ All outputs will be exported to the Google Drive linked to the GEE account.
 ## Description
 - fusion_GEE.py performs GEE-based optical-SAR fusing. It retrieves optical and SAR satellite images from GEE for an user-specified period and AOI, predicts cloudy optical images with corresponding SAR images which are not affected by cloud, and outputs infilled optical images.
 - Parameters.json in config folder contains the configuration for all environmental and model parameters.
-- The AOI.shp in AOI folder contains all case study sites as below:
+- The shape or json files in AOI folder contains all case study sites as below:
 
 | Name               | Landcover and Natural                                                         | Area (km^2) | Site Central Longitude (°E) | Site Central Latitude (°S) |
 |--------------------|-------------------------------------------------------------------------------|-------------|-----------------------------|----------------------------|
