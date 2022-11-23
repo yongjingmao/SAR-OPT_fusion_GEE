@@ -22,6 +22,7 @@ import ee
 # ee.Authenticate()
 ee.Initialize()
 
+#%%
 
 def main():
     """
