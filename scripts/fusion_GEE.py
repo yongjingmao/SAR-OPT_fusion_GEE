@@ -159,6 +159,9 @@ def main():
     # Step 1~2, calculate NDVI and preprocess optical images
     optical_collection = GEE_funcs.prepare_optical(optical_collection, AOI,
                                                    OPTICAL_MISSION)
+    # Only use images with more than 100 pixels within the AOI
+    optical_collection = optical_collection.filterMetadata(
+        'PIXEL_COUNT_AOI', 'greater_than', 100)
 
     if EXPORT_INPUT:
         """Export input NDVI images for SENAP test purpose

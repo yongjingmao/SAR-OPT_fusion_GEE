@@ -52,7 +52,9 @@ def prepare_optical(optical_collection, AOI, optical_mission):
                 maxPixels=1e9).get('Mask'))
         cloud_percent = cloud_sum.divide(cloud_count).multiply(100)
 
-        return img.addBands(mask).set({'CLOUD_PERCENTAGE_AOI': cloud_percent})
+        return img.addBands(mask).set({
+            'CLOUD_PERCENTAGE_AOI': cloud_percent,
+            'PIXEL_COUNT_AOI': cloud_count})
 
     def add_cloudMask_S2(img):
         """ Step2: Process Sentinel cloud flag
@@ -79,7 +81,9 @@ def prepare_optical(optical_collection, AOI, optical_mission):
                 maxPixels=1e9).get('Mask'))
         cloud_percent = cloud_sum.divide(cloud_count).multiply(100)
 
-        return img.addBands(mask).set({'CLOUD_PERCENTAGE_AOI': cloud_percent})
+        return img.addBands(mask).set({
+            'CLOUD_PERCENTAGE_AOI': cloud_percent,
+            'PIXEL_COUNT_AOI': cloud_count})
 
     if optical_mission == 'L8':
         optical_collection = optical_collection.map(cal_NDVI).map(
